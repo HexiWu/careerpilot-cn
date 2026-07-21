@@ -20,6 +20,21 @@ def test_health_and_spa(tmp_path: Path):
         assert "CareerPilot CN" in response.text
 
 
+def test_spa_starts_behind_resume_upload_gate(tmp_path: Path):
+    with make_client(tmp_path) as client:
+        response = client.get("/")
+
+        assert 'id="resume-gate"' in response.text
+        assert 'id="dashboard-content" class="hidden"' in response.text
+        assert 'id="sync-button" class="primary" disabled' in response.text
+        assert 'id="job-search" placeholder="上传简历后可搜索" disabled' in response.text
+
+        script = client.get("/assets/app.js").text
+        assert "resumeUploaded:false" in script
+        assert "if(!state.resumeUploaded)return" in script
+        assert not script.rstrip().endswith("refresh();")
+
+
 def test_jobs_and_application_board(tmp_path: Path):
     with make_client(tmp_path) as client:
         db = client.app.state.service.db

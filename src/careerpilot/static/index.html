@@ -24,35 +24,45 @@
       <div><p class="eyebrow">OFFICIAL CAREER INTELLIGENCE</p><h1 id="page-title">你的岗位决策中心</h1></div>
       <div class="header-actions">
         <label class="upload-button"><input id="resume-file" type="file" accept="application/pdf">上传简历</label>
-        <button id="sync-button" class="primary">运行官网研究</button>
+        <button id="sync-button" class="primary" disabled title="请先上传简历">运行官网研究</button>
       </div>
     </header>
 
     <div id="notice" class="notice hidden"></div>
 
     <section id="dashboard" class="view active">
-      <div class="hero-grid">
-        <article class="profile-card panel">
-          <div class="panel-heading"><div><p class="eyebrow">CANDIDATE SIGNAL</p><h2 id="profile-name">等待上传简历</h2></div><span class="status-pill">LIVE PROFILE</span></div>
-          <p id="profile-summary" class="muted">上传 PDF 后，Resume Profiler Agent 会自动生成求职画像。</p>
-          <div id="skills" class="chips"></div>
-          <div class="role-block"><small>建议方向</small><div id="roles" class="roles"></div></div>
-        </article>
-        <article class="signal-card panel dark-panel">
-          <p class="eyebrow">TODAY'S SIGNAL</p>
-          <div class="signal-number"><span id="top-score">--</span><small>/100</small></div>
-          <p>最高岗位匹配度</p>
-          <div class="signal-line"><span>官网岗位</span><b id="job-count">0</b></div>
-          <div class="signal-line"><span>健康数据源</span><b id="source-count">0</b></div>
-        </article>
-      </div>
+      <article id="resume-gate" class="resume-gate panel">
+        <span class="gate-icon">↥</span>
+        <p class="eyebrow">START WITH YOUR RESUME</p>
+        <h2>上传简历，开始岗位决策</h2>
+        <p class="muted">在你主动上传 PDF 之前，页面不会读取或展示任何历史候选人信息。</p>
+        <label class="upload-button gate-upload"><input id="resume-file-gate" type="file" accept="application/pdf">选择 PDF 简历</label>
+      </article>
 
-      <div class="section-heading"><div><p class="eyebrow">PRIORITY QUEUE</p><h2>最值得申请的岗位</h2></div><button class="text-button" data-go="jobs">查看全部 →</button></div>
-      <div id="recommendation-list" class="job-list empty-state">上传简历并运行官网研究后显示推荐。</div>
+      <div id="dashboard-content" class="hidden">
+        <div class="hero-grid">
+          <article class="profile-card panel">
+            <div class="panel-heading"><div><p class="eyebrow">CANDIDATE SIGNAL</p><h2 id="profile-name"></h2></div><span class="status-pill">LIVE PROFILE</span></div>
+            <p id="profile-summary" class="muted"></p>
+            <div id="skills" class="chips"></div>
+            <div class="role-block"><small>建议方向</small><div id="roles" class="roles"></div></div>
+          </article>
+          <article class="signal-card panel dark-panel">
+            <p class="eyebrow">TODAY'S SIGNAL</p>
+            <div class="signal-number"><span id="top-score">--</span><small>/100</small></div>
+            <p>最高岗位匹配度</p>
+            <div class="signal-line"><span>官网岗位</span><b id="job-count">0</b></div>
+            <div class="signal-line"><span>健康数据源</span><b id="source-count">0</b></div>
+          </article>
+        </div>
+
+        <div class="section-heading"><div><p class="eyebrow">PRIORITY QUEUE</p><h2>最值得申请的岗位</h2></div><button class="text-button" data-go="jobs">查看全部 →</button></div>
+        <div id="recommendation-list" class="job-list empty-state">运行官网研究后显示推荐。</div>
+      </div>
     </section>
 
     <section id="jobs" class="view">
-      <div class="toolbar panel"><input id="job-search" placeholder="搜索公司、岗位或城市"><button id="search-button">筛选</button><span id="freshness" class="muted">等待同步</span></div>
+      <div class="toolbar panel"><input id="job-search" placeholder="上传简历后可搜索" disabled><button id="search-button" disabled>筛选</button><span id="freshness" class="muted">等待上传简历</span></div>
       <div id="all-jobs" class="job-list empty-state">暂无官网岗位。</div>
     </section>
 
@@ -74,4 +84,3 @@
   <script src="/assets/app.js"></script>
 </body>
 </html>
-
