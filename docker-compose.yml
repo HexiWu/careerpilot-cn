@@ -1,0 +1,15 @@
+services:
+  careerpilot:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      CAREERPILOT_DATABASE: /app/data/careerpilot.db
+      CAREERPILOT_SYNC_INTERVAL_HOURS: "4"
+      CAREERPILOT_MAX_COMPANIES_PER_SYNC: "32"
+    volumes:
+      - careerpilot-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  careerpilot-data:
