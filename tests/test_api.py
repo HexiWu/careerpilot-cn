@@ -49,3 +49,13 @@ def test_rejects_non_pdf_resume(tmp_path: Path):
             files={"file": ("resume.txt", b"not pdf", "text/plain")},
         )
         assert response.status_code == 400
+
+
+def test_rejects_unknown_company_in_research(tmp_path: Path):
+    with make_client(tmp_path) as client:
+        response = client.post(
+            "/api/research",
+            json={"company_names": ["不存在的公司"], "max_companies": 1},
+        )
+        assert response.status_code == 400
+        assert "未知公司" in response.json()["detail"]

@@ -4,7 +4,7 @@ import json
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from careerpilot.models import AgentEvent, ApplicationStatus, JobPosting, SourceHealth
@@ -224,7 +224,7 @@ class Database:
                 """INSERT INTO applications(job_id, status, note, updated_at) VALUES (?, ?, ?, ?)
                    ON CONFLICT(job_id) DO UPDATE SET status=excluded.status, note=excluded.note,
                    updated_at=excluded.updated_at""",
-                (job_id, status, note, datetime.utcnow().isoformat()),
+                (job_id, status, note, datetime.now(UTC).isoformat()),
             )
 
     def list_applications(self) -> list[dict]:

@@ -101,6 +101,9 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     async def research(request: ResearchRequest) -> dict:
         selected: list[Company] = []
         names = set(request.company_names)
+        known_names = {company.name for company in DEFAULT_COMPANIES}
+        if unknown := names - known_names:
+            raise HTTPException(400, f"未知公司：{'、'.join(sorted(unknown))}")
         for company in DEFAULT_COMPANIES:
             if names and company.name not in names:
                 continue

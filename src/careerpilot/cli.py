@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from dataclasses import replace
 
 import uvicorn
 
@@ -28,16 +29,13 @@ def main() -> None:
         print(parse_resume_file(args.path).model_dump_json(indent=2, exclude={"raw_text"}))
         return
     if args.command == "sync":
-        service = CareerPilotService(settings)
+        service = CareerPilotService(replace(settings, max_companies_per_sync=args.companies))
         profile = parse_resume_file(args.resume) if args.resume else None
         if profile and args.resume:
             profile.id = service.db.save_resume(
                 args.resume, profile.model_dump_json(), profile.created_at
             )
-        original = service.settings.max_companies_per_sync
-        object.__setattr__(service.settings, "max_companies_per_sync", args.companies)
         state = asyncio.run(service.research(profile=profile))
-        object.__setattr__(service.settings, "max_companies_per_sync", original)
         print(
             json.dumps(
                 {"run_id": state.run_id, "metrics": state.metrics}, ensure_ascii=False, indent=2
