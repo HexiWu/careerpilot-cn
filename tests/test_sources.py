@@ -1,7 +1,15 @@
 from pathlib import Path
 
+import httpx
+import pytest
+
 from careerpilot.models import Company, SourceKind
-from careerpilot.sources import CareerSiteDiscoverer, OfficialCareerParser, PublicPageGuard
+from careerpilot.sources import (
+    CareerSiteDiscoverer,
+    OfficialCareerParser,
+    PublicPageGuard,
+    TencentCareerAdapter,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -34,3 +42,46 @@ def test_parses_json_ld_job_with_evidence():
 def test_guard_detects_login_or_captcha():
     assert PublicPageGuard.is_restricted_page("请登录后查看，请输入验证码")
     assert not PublicPageGuard.is_restricted_page("公开招聘职位列表")
+
+
+@pytest.mark.asyncio
+async def test_tencent_adapter_maps_public_official_api():
+    payload = {
+        "Code": 200,
+        "Data": {
+            "Posts": [
+                {
+                    "PostId": "2046210923894571008",
+                    "RecruitPostName": "大模型 Agent 研发工程师",
+                    "LocationName": "深圳",
+                    "BGName": "WXG",
+                    "ProductName": "微信",
+                    "CategoryName": "技术",
+                    "Responsibility": "使用 Python、Docker 构建智能体评测基座",
+                    "Requirement": "熟悉 SQL 与机器学习",
+                    "RequireWorkYearsName": "两年以上工作经验",
+                    "LastUpdateTime": "2026年07月21日",
+                    "PostURL": "http://careers.tencent.com/jobdesc.html?postId=2046210923894571008",
+                }
+            ]
+        },
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["language"] == "zh-cn"
+        return httpx.Response(200, json=payload)
+
+    company = Company(
+        name="腾讯",
+        homepage_url="https://www.tencent.com/",
+        career_urls=["https://careers.tencent.com/"],
+    )
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        jobs, health = await TencentCareerAdapter(OfficialCareerParser()).fetch(client, company)
+
+    assert health.status == "healthy"
+    assert health.jobs_found == 1
+    assert jobs[0].external_id == "2046210923894571008"
+    assert jobs[0].source_kind == SourceKind.OFFICIAL_SUBDOMAIN
+    assert str(jobs[0].source_url).startswith("https://careers.tencent.com/")
+    assert {"Python", "Docker", "SQL"}.issubset(jobs[0].skills)
