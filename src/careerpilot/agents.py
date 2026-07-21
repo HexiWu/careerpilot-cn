@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import uuid
+from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -190,8 +191,11 @@ class JobParserAgent:
             job.id = job_id
             counts[status] += 1
             state.persisted_jobs.append(job)
+        health_by_company: dict[str, list[SourceHealth]] = defaultdict(list)
         for health in state.source_health:
-            self.db.save_source_health(health)
+            health_by_company[health.company_name].append(health)
+        for company_name, items in health_by_company.items():
+            self.db.replace_source_health(company_name, items)
         self.tracer.emit(
             state,
             self.name,

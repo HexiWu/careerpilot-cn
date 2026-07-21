@@ -47,4 +47,6 @@ class CareerPilotService:
         profile = profile or self.latest_profile()
         if not profile:
             return []
-        return rank_jobs(profile, self.db.list_jobs(limit=500))
+        # A full multi-source sync already exceeds 500 active roles. Re-rank the complete
+        # practical corpus so the dashboard cannot silently omit older companies.
+        return rank_jobs(profile, self.db.list_jobs(limit=10_000))

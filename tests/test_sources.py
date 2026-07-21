@@ -3,12 +3,12 @@ from pathlib import Path
 import httpx
 import pytest
 
+from careerpilot.adapters import TencentCareerAdapter
 from careerpilot.models import Company, SourceKind
 from careerpilot.sources import (
     CareerSiteDiscoverer,
     OfficialCareerParser,
     PublicPageGuard,
-    TencentCareerAdapter,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -44,6 +44,11 @@ def test_guard_detects_login_or_captcha():
     assert not PublicPageGuard.is_restricted_page("公开招聘职位列表")
 
 
+def test_parser_skips_non_http_share_links():
+    content = '<a href="mailto:?body=https://example.com/jobs/1">Share job by email</a>'
+    assert OfficialCareerParser().parse(company(), "https://careers.example.com", content) == []
+
+
 @pytest.mark.asyncio
 async def test_tencent_adapter_maps_public_official_api():
     payload = {
@@ -77,7 +82,7 @@ async def test_tencent_adapter_maps_public_official_api():
         career_urls=["https://careers.tencent.com/"],
     )
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        jobs, health = await TencentCareerAdapter(OfficialCareerParser()).fetch(client, company)
+        jobs, health = await TencentCareerAdapter().fetch(client, company)
 
     assert health.status == "healthy"
     assert health.jobs_found == 1

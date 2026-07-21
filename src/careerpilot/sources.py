@@ -11,11 +11,17 @@ from urllib.robotparser import RobotFileParser
 import httpx
 from bs4 import BeautifulSoup, Tag
 
+from careerpilot.adapters import CareerAdapter, default_adapters
 from careerpilot.models import Company, JobPosting, SourceHealth, SourceKind
 from careerpilot.taxonomy import extract_skills, normalize_text
 
 JOB_LINK_TERMS = ("job", "jobs", "position", "career", "招聘", "职位", "岗位")
 CAREER_LINK_TERMS = ("career", "careers", "jobs", "join", "recruit", "招聘", "加入我们", "人才")
+
+
+def error_message(exc: Exception) -> str:
+    detail = str(exc).strip()
+    return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
 
 
 @dataclass(slots=True)
@@ -100,6 +106,8 @@ class OfficialCareerParser:
         requirements = item.get("qualifications") or item.get("requirements") or ""
         target_url = item.get("url") or item.get("applyUrl") or item.get("absolute_url") or page_url
         target_url = urljoin(page_url, str(target_url))
+        if urlparse(target_url).scheme not in {"http", "https"}:
+            return None
         external_id = str(
             item.get("identifier") or item.get("id") or item.get("jobId") or target_url
         )
@@ -239,94 +247,13 @@ class CareerSiteDiscoverer:
         return list(dict.fromkeys(discovered))
 
 
-class TencentCareerAdapter:
-    """Adapter for the public JSON endpoint used by Tencent's official career site."""
-
-    api_url = "https://careers.tencent.com/tencentcareer/api/post/Query"
-
-    def __init__(self, parser: OfficialCareerParser, page_size: int = 100):
-        self.parser = parser
-        self.page_size = page_size
-
-    async def fetch(
-        self, client: httpx.AsyncClient, company: Company
-    ) -> tuple[list[JobPosting], SourceHealth]:
-        response = await client.get(
-            self.api_url,
-            params={
-                "pageIndex": 1,
-                "pageSize": self.page_size,
-                "language": "zh-cn",
-                "area": "cn",
-            },
-            follow_redirects=True,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        posts = payload.get("Data", {}).get("Posts", [])
-        jobs: list[JobPosting] = []
-        for post in posts:
-            published_at = None
-            if value := post.get("LastUpdateTime"):
-                try:
-                    published_at = datetime.strptime(value, "%Y年%m月%d日").replace(tzinfo=UTC)
-                except ValueError:
-                    pass
-            target_url = str(post.get("PostURL") or "").replace("http://", "https://", 1)
-            if not target_url:
-                target_url = f"https://careers.tencent.com/jobdesc.html?postId={post['PostId']}"
-            job = JobPosting(
-                external_id=str(post.get("PostId") or target_url),
-                company_name=company.name,
-                title=normalize_text(str(post.get("RecruitPostName") or "")),
-                location=normalize_text(str(post.get("LocationName") or "")),
-                department=normalize_text(
-                    " / ".join(
-                        value
-                        for value in (
-                            str(post.get("BGName") or ""),
-                            str(post.get("ProductName") or ""),
-                            str(post.get("CategoryName") or ""),
-                        )
-                        if value
-                    )
-                ),
-                experience_required=normalize_text(
-                    str(post.get("RequireWorkYearsName") or "")
-                ),
-                description=normalize_text(str(post.get("Responsibility") or "")),
-                requirements=normalize_text(str(post.get("Requirement") or "")),
-                skills=extract_skills(
-                    " ".join(
-                        str(post.get(key) or "")
-                        for key in ("RecruitPostName", "Responsibility", "Requirement")
-                    )
-                ),
-                source_url=target_url,
-                apply_url=target_url,
-                source_kind=self.parser._source_kind(company, target_url),
-                source_evidence="腾讯招聘官网公开职位接口；保留官网详情链接与更新时间",
-                published_at=published_at,
-                last_seen_at=datetime.now(UTC),
-            ).ensure_content_hash()
-            if job.title:
-                jobs.append(job)
-        return jobs, SourceHealth(
-            company_name=company.name,
-            url=self.api_url,
-            status="healthy" if jobs else "empty",
-            jobs_found=len(jobs),
-            error="" if jobs else "official API returned no active jobs",
-        )
-
-
 class OfficialCareerSync:
     def __init__(self, timeout: float = 20, user_agent: str = "CareerPilotCN/0.1"):
         self.timeout = timeout
         self.user_agent = user_agent
         self.parser = OfficialCareerParser()
         self.guard = PublicPageGuard(user_agent)
-        self.tencent = TencentCareerAdapter(self.parser)
+        self.adapters: dict[str, CareerAdapter] = default_adapters()
 
     async def fetch(self, client: httpx.AsyncClient, url: str) -> FetchResult:
         response = await client.get(url, follow_redirects=True)
@@ -344,29 +271,31 @@ class OfficialCareerSync:
         headers = {"User-Agent": self.user_agent, "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.6"}
         async with httpx.AsyncClient(timeout=self.timeout, headers=headers) as client:
             urls = [str(url) for url in company.career_urls]
-            if company.name == "腾讯":
-                official_url = urls[0] if urls else str(company.homepage_url)
-                if not await self.guard.allowed(client, official_url):
+            if adapter := self.adapters.get(company.name):
+                if not await self.guard.allowed(client, adapter.entry_url):
                     return [], [
                         SourceHealth(
                             company_name=company.name,
-                            url=official_url,
+                            url=adapter.entry_url,
                             status="blocked_by_robots",
                             error="robots.txt disallows automated access",
                         )
                     ]
                 try:
-                    api_jobs, api_health = await self.tencent.fetch(client, company)
-                    if api_jobs:
-                        return api_jobs, [api_health]
-                    health.append(api_health)
+                    adapter_jobs, adapter_health = await adapter.fetch(client, company)
+                    if adapter_jobs:
+                        return adapter_jobs, [adapter_health]
+                    health.append(adapter_health)
                 except (httpx.HTTPError, ValueError, KeyError, json.JSONDecodeError) as exc:
                     health.append(
                         SourceHealth(
                             company_name=company.name,
-                            url=self.tencent.api_url,
+                            url=adapter.entry_url,
                             status="error",
-                            error=f"official API failed; falling back to HTML: {exc}",
+                            error=(
+                                "official adapter failed; falling back to HTML: "
+                                f"{error_message(exc)}"
+                            ),
                         )
                     )
             if not urls:
@@ -379,7 +308,7 @@ class OfficialCareerSync:
                             company_name=company.name,
                             url=str(company.homepage_url),
                             status="error",
-                            error=str(exc),
+                            error=error_message(exc),
                         )
                     )
             for url in urls:
@@ -411,14 +340,18 @@ class OfficialCareerSync:
                         SourceHealth(
                             company_name=company.name,
                             url=url,
-                            status="healthy",
+                            status="healthy" if found else "empty",
                             jobs_found=len(found),
+                            error="" if found else "official page returned no parseable jobs",
                         )
                     )
                 except (httpx.HTTPError, ValueError) as exc:
                     health.append(
                         SourceHealth(
-                            company_name=company.name, url=url, status="error", error=str(exc)
+                            company_name=company.name,
+                            url=url,
+                            status="error",
+                            error=error_message(exc),
                         )
                     )
         return OfficialCareerParser._dedupe(jobs), health

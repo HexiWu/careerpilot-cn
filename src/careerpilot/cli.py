@@ -22,7 +22,7 @@ def main() -> None:
     resume.add_argument("path")
     sync = sub.add_parser("sync", help="Run the official-career-site agent workflow")
     sync.add_argument("--resume")
-    sync.add_argument("--companies", type=int, default=10)
+    sync.add_argument("--companies", type=int, default=50)
     args = parser.parse_args()
 
     if args.command == "parse-resume":

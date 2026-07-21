@@ -11,6 +11,7 @@ SKILL_ALIASES: dict[str, tuple[str, ...]] = {
     "Spark": ("spark", "pyspark", "sparkml"),
     "Airflow": ("airflow",),
     "Hadoop": ("hadoop", "hdfs"),
+    "Hive": ("hive",),
     "Flink": ("flink",),
     "Kafka": ("kafka",),
     "Docker": ("docker", "容器化"),
@@ -27,7 +28,7 @@ SKILL_ALIASES: dict[str, tuple[str, ...]] = {
     "Machine Learning": ("machine learning", "机器学习", "模型训练", "ml"),
     "Recommendation": ("推荐系统", "推荐算法", "recommendation", "recommender"),
     "BERT": ("bert",),
-    "LLM": ("llm", "大语言模型", "langchain", "langgraph", "agent"),
+    "LLM": ("llm", "大语言模型", "大模型", "langchain", "langgraph", "agent"),
     "Power BI": ("power bi", "powerbi"),
     "Tableau": ("tableau",),
     "ETL": ("etl", "elt", "数据管道", "数据开发"),
@@ -71,11 +72,16 @@ def extract_skills(text: str) -> list[str]:
     lowered = text.lower()
     found: list[str] = []
     for canonical, aliases in SKILL_ALIASES.items():
-        if any(
-            re.search(rf"(?<!\w){re.escape(alias.lower())}(?!\w)", lowered) for alias in aliases
-        ):
+        if any(_contains_alias(lowered, alias.lower()) for alias in aliases):
             found.append(canonical)
     return found
+
+
+def _contains_alias(text: str, alias: str) -> bool:
+    """Match CJK phrases as substrings and keep token boundaries for Latin aliases."""
+    if any("\u4e00" <= character <= "\u9fff" for character in alias):
+        return alias in text
+    return re.search(rf"(?<!\w){re.escape(alias)}(?!\w)", text) is not None
 
 
 def infer_target_roles(skills: list[str], limit: int = 6) -> list[str]:

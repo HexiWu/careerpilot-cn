@@ -26,7 +26,7 @@ class ApplicationUpdate(BaseModel):
 
 class ResearchRequest(BaseModel):
     company_names: list[str] = Field(default_factory=list)
-    max_companies: int = Field(default=10, ge=1, le=50)
+    max_companies: int = Field(default=50, ge=1, le=50)
 
 
 async def _scheduler_loop(service: CareerPilotService) -> None:

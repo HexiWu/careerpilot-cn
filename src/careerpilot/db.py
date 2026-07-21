@@ -213,6 +213,27 @@ class Database:
                 ),
             )
 
+    def replace_source_health(self, company_name: str, items: list[SourceHealth]) -> None:
+        """Replace one company's snapshot so superseded endpoints do not stay visible."""
+        with self.connect() as conn:
+            conn.execute("DELETE FROM source_health WHERE company_name=?", (company_name,))
+            conn.executemany(
+                """INSERT INTO source_health(
+                       company_name, url, status, jobs_found, error, checked_at
+                   ) VALUES (?, ?, ?, ?, ?, ?)""",
+                [
+                    (
+                        item.company_name,
+                        item.url,
+                        item.status,
+                        item.jobs_found,
+                        item.error,
+                        item.checked_at.isoformat(),
+                    )
+                    for item in items
+                ],
+            )
+
     def source_health(self) -> list[dict]:
         with self.connect() as conn:
             rows = conn.execute("SELECT * FROM source_health ORDER BY checked_at DESC").fetchall()

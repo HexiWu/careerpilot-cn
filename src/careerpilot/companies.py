@@ -263,5 +263,21 @@ DEFAULT_COMPANIES: tuple[Company, ...] = tuple(
             "industry": "物流科技",
             "priority": 85,
         },
+        {
+            "name": "亚马逊中国",
+            "aliases": ["Amazon China", "Amazon"],
+            "homepage_url": "https://www.amazon.cn/",
+            "career_urls": ["https://www.amazon.jobs/en/search?normalized_country_code%5B%5D=CHN"],
+            "industry": "云计算与电商",
+            "priority": 95,
+        },
+        {
+            "name": "苹果中国",
+            "aliases": ["Apple China", "Apple"],
+            "homepage_url": "https://www.apple.com.cn/",
+            "career_urls": ["https://jobs.apple.com/en-us/search?location=china-CHNC"],
+            "industry": "消费电子与软件",
+            "priority": 95,
+        },
     ]
 )
