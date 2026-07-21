@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="CareerPilot CN - 中国企业官网岗位智能研究与决策平台">
+  <title>CareerPilot CN</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">C</span><div><strong>CareerPilot</strong><small>CN · Agentic Search</small></div></div>
+    <nav>
+      <button class="nav-item active" data-view="dashboard"><span>◫</span>推荐总览</button>
+      <button class="nav-item" data-view="jobs"><span>⌕</span>官网岗位</button>
+      <button class="nav-item" data-view="agents"><span>⌘</span>Agent 轨迹</button>
+      <button class="nav-item" data-view="sources"><span>◉</span>数据源监控</button>
+    </nav>
+    <div class="privacy-note"><span>●</span><div><b>本地优先</b><small>简历不离开你的设备</small></div></div>
+  </aside>
+
+  <main>
+    <header>
+      <div><p class="eyebrow">OFFICIAL CAREER INTELLIGENCE</p><h1 id="page-title">你的岗位决策中心</h1></div>
+      <div class="header-actions">
+        <label class="upload-button"><input id="resume-file" type="file" accept="application/pdf">上传简历</label>
+        <button id="sync-button" class="primary">运行官网研究</button>
+      </div>
+    </header>
+
+    <div id="notice" class="notice hidden"></div>
+
+    <section id="dashboard" class="view active">
+      <div class="hero-grid">
+        <article class="profile-card panel">
+          <div class="panel-heading"><div><p class="eyebrow">CANDIDATE SIGNAL</p><h2 id="profile-name">等待上传简历</h2></div><span class="status-pill">LIVE PROFILE</span></div>
+          <p id="profile-summary" class="muted">上传 PDF 后，Resume Profiler Agent 会自动生成求职画像。</p>
+          <div id="skills" class="chips"></div>
+          <div class="role-block"><small>建议方向</small><div id="roles" class="roles"></div></div>
+        </article>
+        <article class="signal-card panel dark-panel">
+          <p class="eyebrow">TODAY'S SIGNAL</p>
+          <div class="signal-number"><span id="top-score">--</span><small>/100</small></div>
+          <p>最高岗位匹配度</p>
+          <div class="signal-line"><span>官网岗位</span><b id="job-count">0</b></div>
+          <div class="signal-line"><span>健康数据源</span><b id="source-count">0</b></div>
+        </article>
+      </div>
+
+      <div class="section-heading"><div><p class="eyebrow">PRIORITY QUEUE</p><h2>最值得申请的岗位</h2></div><button class="text-button" data-go="jobs">查看全部 →</button></div>
+      <div id="recommendation-list" class="job-list empty-state">上传简历并运行官网研究后显示推荐。</div>
+    </section>
+
+    <section id="jobs" class="view">
+      <div class="toolbar panel"><input id="job-search" placeholder="搜索公司、岗位或城市"><button id="search-button">筛选</button><span id="freshness" class="muted">等待同步</span></div>
+      <div id="all-jobs" class="job-list empty-state">暂无官网岗位。</div>
+    </section>
+
+    <section id="agents" class="view">
+      <div class="section-heading"><div><p class="eyebrow">AGENT OBSERVABILITY</p><h2>执行轨迹</h2></div><span class="status-pill">TRACE ENABLED</span></div>
+      <div class="agent-map panel">
+        <span>Resume Profiler</span><i>→</i><span>Company Discovery</span><i>→</i><span>Career Browser</span><i>→</i><span>Job Parser</span><i>→</i><span>Matching</span><i>→</i><span>Verification</span><i>→</i><span>Decision</span>
+      </div>
+      <div id="trace-list" class="timeline empty-state">运行研究任务后显示工具调用和Agent决策。</div>
+    </section>
+
+    <section id="sources" class="view">
+      <div class="section-heading"><div><p class="eyebrow">SOURCE HEALTH</p><h2>企业官网监控</h2></div><span class="muted">每4小时自动更新</span></div>
+      <div id="source-grid" class="source-grid empty-state">尚无数据源健康记录。</div>
+    </section>
+  </main>
+
+  <div id="loading" class="loading hidden"><div class="loader"></div><b>Agents 正在研究企业官网</b><small>发现招聘入口 · 解析岗位 · 校验证据 · 生成决策</small></div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>
+

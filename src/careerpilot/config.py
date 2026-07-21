@@ -12,6 +12,7 @@ class Settings:
     request_timeout: float = 20.0
     user_agent: str = "CareerPilotCN/0.1 (+local portfolio project)"
     max_companies_per_sync: int = 50
+    scheduler_enabled: bool = True
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -23,6 +24,8 @@ class Settings:
                 "CAREERPILOT_USER_AGENT", "CareerPilotCN/0.1 (+local portfolio project)"
             ),
             max_companies_per_sync=int(os.getenv("CAREERPILOT_MAX_COMPANIES_PER_SYNC", "50")),
+            scheduler_enabled=os.getenv("CAREERPILOT_SCHEDULER_ENABLED", "true").lower()
+            in {"1", "true", "yes"},
         )
 
 

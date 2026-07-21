@@ -1,0 +1,51 @@
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+from careerpilot.api import create_app
+from careerpilot.config import Settings
+from careerpilot.models import JobPosting, SourceKind
+
+
+def make_client(tmp_path: Path) -> TestClient:
+    app = create_app(Settings(database_path=tmp_path / "api.db", scheduler_enabled=False))
+    return TestClient(app)
+
+
+def test_health_and_spa(tmp_path: Path):
+    with make_client(tmp_path) as client:
+        assert client.get("/api/health").json()["status"] == "ok"
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "CareerPilot CN" in response.text
+
+
+def test_jobs_and_application_board(tmp_path: Path):
+    with make_client(tmp_path) as client:
+        db = client.app.state.service.db
+        job_id, _ = db.upsert_job(
+            JobPosting(
+                external_id="api-job",
+                company_name="示例科技",
+                title="数据工程师",
+                source_url="https://careers.example.com/api-job",
+                source_kind=SourceKind.OFFICIAL_SUBDOMAIN,
+            )
+        )
+        jobs = client.get("/api/jobs").json()
+        assert jobs[0]["title"] == "数据工程师"
+        response = client.post(
+            "/api/applications",
+            json={"job_id": job_id, "status": "saved", "note": "优先申请"},
+        )
+        assert response.status_code == 200
+        assert client.get("/api/applications").json()[0]["status"] == "saved"
+
+
+def test_rejects_non_pdf_resume(tmp_path: Path):
+    with make_client(tmp_path) as client:
+        response = client.post(
+            "/api/resumes/upload",
+            files={"file": ("resume.txt", b"not pdf", "text/plain")},
+        )
+        assert response.status_code == 400
